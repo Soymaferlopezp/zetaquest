@@ -3,6 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import WalletConnect from "../components/wallet-connect";
+import BackgroundFX from "../components/BackgroundFX";
+import HoloCard from "../components/HoloCard";
 
 const ART = {
   bgHero: "/art/bg-1.png",
@@ -22,7 +24,8 @@ const ART = {
 
 export default function Page() {
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="relative min-h-screen text-white">
+    <BackgroundFX />
       {/* NAV */}
       <header className="px-4 py-4 flex items-center justify-between sticky top-0 z-50 bg-black/70 backdrop-blur">
         <Link href="/" className="font-pixel text-xl tracking-wide">ZetaQuest</Link>
@@ -33,9 +36,6 @@ export default function Page() {
           <a href="#faq" className="hover:opacity-100">FAQ</a>
         </nav>
         <div className="flex items-center gap-3">
-         {/* <a href="/app" className="font-press text-xs px-3 py-2 rounded-lg bg-cyan-400 text-black hover:brightness-110 transition">
-            Abrir Dashboard
-          </a>*/ }
           <WalletConnect redirectToOnConnect="/after-connect" />
         </div>
       </header>
