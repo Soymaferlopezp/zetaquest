@@ -3,9 +3,22 @@
 import { ReactNode, useEffect, useRef } from "react";
 import { WagmiProvider, createConfig } from "wagmi";
 import { mainnet, polygon, bsc } from "wagmi/chains";
-import { defineChain, http } from "viem";
+import { defineChain, http, fallback } from "viem";
 import { createWeb3Modal } from "@web3modal/wagmi/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+/** ---------- RPC fallbacks (lee de .env.local) ---------- */
+const ZETA_RPC_LIST = (
+  process.env.NEXT_PUBLIC_ZETA_RPC_LIST ??
+  // orden de preferencia; puedes reordenar
+  "https://7001.rpc.thirdweb.com," +
+  "https://zetachain-testnet.public.blastapi.io," +
+  "https://zetachain-athens-evm.blockpi.network/v1/rpc/public," +
+  "https://zetachain-testnet-evm.itrocket.net"
+)
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 
 /** ---------- Chains ---------- */
 const zetachainMainnet = defineChain({
@@ -18,9 +31,10 @@ const zetachainMainnet = defineChain({
 
 const zetachainTestnet = defineChain({
   id: 7001,
-  name: "ZetaChain Testnet",
+  name: "ZetaChain Testnet (Athens)",
   nativeCurrency: { name: "Zeta", symbol: "ZETA", decimals: 18 },
-  rpcUrls: { default: { http: ["https://zetachain-athens-evm.blockpi.network/v1/rpc/public"] } },
+  // importante: proveemos la lista para que UI muestre algo, pero el transport real usa fallback abajo
+  rpcUrls: { default: { http: ZETA_RPC_LIST } },
   blockExplorers: { default: { name: "Athens Explorer", url: "https://athens.explorer.zetachain.com" } },
 });
 
@@ -31,15 +45,18 @@ const wagmiConfig = createConfig({
   chains,
   multiInjectedProviderDiscovery: true,
   transports: {
-    [mainnet.id]: http(),
+    [mainnet.id]: http(),            // usa el default del wallet/navegador
     [polygon.id]: http(),
     [bsc.id]: http(),
-    [zetachainTestnet.id]: http("https://zetachain-athens-evm.blockpi.network/v1/rpc/public"),
+    // ★ fallback automático entre varios RPCs para Athens
+    [zetachainTestnet.id]: fallback(
+      ZETA_RPC_LIST.map((u) => http(u, { batch: true }))
+    ),
     [zetachainMainnet.id]: http("https://zetachain-evm.blockpi.network/v1/rpc/public"),
   },
 });
 
-/** ---------- Inicializa Web3Modal solo en cliente y solo una vez ---------- */
+/** ---------- Inicializa Web3Modal solo en cliente y una vez ---------- */
 function initWeb3ModalOnce() {
   if (typeof window === "undefined") return;
   if ((window as any).__w3mInited) return;
@@ -76,14 +93,12 @@ export default function Providers({ children }: { children: ReactNode }) {
     initWeb3ModalOnce();
   }, []);
 
-  // ✅ QueryClient estable con valor inicial
+  // QueryClient estable
   const queryClient = useRef(new QueryClient()).current;
 
   return (
     <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     </WagmiProvider>
   );
 }

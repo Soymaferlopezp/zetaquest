@@ -3,14 +3,27 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "compile": "hardhat compile",
-    "deploy:testnet": "hardhat run scripts/deploy.js --network zetachain_testnet"
+  "dev": "next dev",
+  "build": "next build",
+  "start": "next start",
+
+    "contracts:build": "hardhat compile",
+    "contracts:deploy:nft": "hardhat run scripts/deploy_nft.js --network zetachain_testnet",
+    "contracts:deploy:core": "hardhat run scripts/deploy_athens_core.js --network zetachain_testnet",
+    "contracts:deploy:light": "hardhat run scripts/deploy_amoy_light.js --network amoy",
+    "nft:setbase": "hardhat run scripts/set_base_image_uri.js --network zetachain_testnet",
+    "nft:setcore": "hardhat run scripts/set_core_on_nft.js --network zetachain_testnet",
+    "contracts:deploy:nftv2": "hardhat run scripts/deploy_nft_v2.js --network zetachain_testnet",
+    "nftv2:setcore": "hardhat run scripts/set_core_on_nft_v2.js --network zetachain_testnet"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "^3.1.0",
     "@openzeppelin/contracts": "^5.4.0",
     "dotenv": "^16.6.1",
     "ethers": "^6.14.2",
-    "hardhat": "^2.26.3"
+    "hardhat": "^2.26.3",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
   }
 }

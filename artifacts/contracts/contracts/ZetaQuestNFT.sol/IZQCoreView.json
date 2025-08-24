@@ -1,0 +1,45 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "IZQCoreView",
+  "sourceName": "contracts/contracts/ZetaQuestNFT.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "tokenId",
+          "type": "uint256"
+        }
+      ],
+      "name": "tokenWorldAndBuff",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "world",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint32",
+          "name": "atk",
+          "type": "uint32"
+        },
+        {
+          "internalType": "uint32",
+          "name": "def",
+          "type": "uint32"
+        },
+        {
+          "internalType": "uint32",
+          "name": "spd",
+          "type": "uint32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}
