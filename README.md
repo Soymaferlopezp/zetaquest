@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/Soymaferlopezp/swipetrade/blob/main/apps/frontend/public/swipetrade-logo.png" alt="ZetaQuest Logo" height="90">
+  <img src="https://github.com/Soymaferlopezp/zetaquest/blob/main/public/art/traveler-epic.png" alt="ZetaQuest Logo" height="90">
 </p>
 
 <h1 align="center">ZetaQuest 🗺️⚔️</h1>
