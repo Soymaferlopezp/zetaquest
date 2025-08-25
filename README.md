@@ -1,10 +1,9 @@
 <p align="center">
-  <img src="https://github.com/Soymaferlopezp/zetaquest/blob/main/public/art/traveler-epic.png" alt="ZetaQuest Logo" height="90">
+  <img src="https://github.com/Soymaferlopezp/zetaquest/blob/main/public/art/traveler-epic.png" alt="ZetaQuest Logo" height="120">
 </p>
 
 <h1 align="center">ZetaQuest 🗺️⚔️</h1>
 
----
 <p align="center">
     <strong>ZetaQuest</strong> is an <strong>on-chain RPG-lite</strong> that demonstrates the power of <strong>Universal Smart Contracts</strong> and ZetaChain's cross-chain messaging. <br />The player controls a <strong>Traveler (NFT)</strong> and completes <strong>dynamic AI-generated quests (Gemini)</strong> by traveling between different blockchains. Each blockchain grants a <strong>unique buff</strong>, and the experience is reflected on-chain in the <strong>ScoreV2 (XP)</strong> and the Traveler's <strong>dynamic tokenURI</strong>.
 </p>
@@ -26,37 +25,37 @@
 ---
 ## 🛠️ Tech Stack
 
-**Frontend**: 
-    - Next.js 14 (App Router).
-    - TailwindCSS + shadcn/ui (minimal)
-    - wagmi + Web3Modal (WalletConnect)
-    - viem (reading/writing contracts)
-    - Framer Motion (smooth animations UI)
+**Frontend**:
+   - Next.js 14 (App Router).
+   - TailwindCSS + shadcn/ui (minimal)
+   - wagmi + Web3Modal (WalletConnect)
+   - viem (reading/writing contracts)
+   - Framer Motion (smooth animations UI)
 
 **Smart Contracts**
-    - **Hardhat + OpenZeppelin v5**
-    - **ZetaQuestNFT v2**
-        - ERC721Enumerable
-        - Soulbound (non-transferable)
-        - **tokenURI** dinámico según XP en ScoreV2
-    - **ScoreV2.sol**
-        - Saves accumulated XP per player
-        - Emits XpAdded and QuestCompleted events
-    - **MainnetBadge.sol**
-        - Soulbound NFT on Mainnet to reflect cross-chain progression
+   - **Hardhat + OpenZeppelin v5**
+   - **ZetaQuestNFT v2**
+       - ERC721Enumerable
+       - Soulbound (non-transferable)
+       - **tokenURI** dinámico según XP en ScoreV2
+   - **ScoreV2.sol**
+       - Saves accumulated XP per player
+       - Emits XpAdded and QuestCompleted events
+   - **MainnetBadge.sol**
+       - Soulbound NFT on Mainnet to reflect cross-chain progression
 
 **API & Backend**
-    - **Next.js Route Handlers (serverless)**
-        - /api/player → player profile
-        - /api/player/travel → cross-chain travel
-        - /api/player/xp → read XP from ScoreV2
-        - /api/quests/new → generate quests with **Gemini AI**
-        - /api/quests/complete → complete quest (sign **addXpAndLog** in ScoreV2)
+   - **Next.js Route Handlers (serverless)**
+       - /api/player → player profile
+       - /api/player/travel → cross-chain travel
+       - /api/player/xp → read XP from ScoreV2
+       - /api/quests/new → generate quests with **Gemini AI**
+       - /api/quests/complete → complete quest (sign **addXpAndLog** in ScoreV2)
 
 **Infra**
-    - **ZetaChain Testnet (Athens 7001)** for development
-    - **ZetaChain Mainnet** for Soulbound Badge deployment
-    - **Google Gemini API** for quest generation
+   - **ZetaChain Testnet (Athens 7001)** for development
+   - **ZetaChain Mainnet** for Soulbound Badge deployment
+   - **Google Gemini API** for quest generation
 
 ---
 ## 📂 Repo Structure
@@ -182,18 +181,18 @@ npx hardhat run scripts/deploy.js --network zetachain_testnet
 ## 🛤️ Roadmap
 
     ✅ MVP: wallet connection, Traveler Soulbound minting, HUD, off-chain quests
-    ✅ ScoreV2: accumulated XP, dynamic tokenURI
+    ✅ ScoreV2: accumulated XP per player + dynamic tokenURI reflected in the NFT
     ✅ Gemini Quests: AI generation via /api/quests/new
-    ✅ Cross-chain: simulated ETH/POL/BNB trips, visual improvement
+    ✅ Real cross-chain travel: contracts in Athens to travel between ETH / POL / BNB and apply buffs
+    ✅ Mainnet Badge Soulbound: on-chain reflection when moving to ZetaChain Mainnet
 
-    ⏭️ Universal smart contracts → on-chain improvements
-    ⏭️ ZetaPoints and on-chain badges (score + NFT achievements)
-    ⏭️ Persistent profile (DB/Prisma or KV store)
-    ⏭️ UI: skins and rarity animations (Epic glow), achievements panel
-    ⏭️ NFT cosmetics marketplace (not pay-to-win)
+    ⏭️ Polish ZetaPoints (ZP): improvements in calculation, persistence, and HUD display
+    ⏭️ On-chain achievements: extend ScoreV2 + dynamic NFT with unlockable badges
+    ⏭️ Persistent player profile: integration with lightweight DB (Prisma/KV store)
+    ⏭️ UI/UX improvements: rarity animations (Epic glow), achievements panel, onboarding modal
 
 ---
-## MVP Flow
+## 🔍 MVP Flow
 
 ```bash
 ┌──────────┐
