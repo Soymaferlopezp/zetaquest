@@ -13,7 +13,7 @@
 
 1. **Landing** (`/`): Connect your wallet → redirect to **/after-connect**.
 2. **After Connect**: 
-    - If you already have Traveler NFT → go to **/app**.
+    - If you already have Traveler NFT → go to **/app**
     - If not → mint at **/mint**.
 3. **Mint** (`/mint`): minteas Traveler (Zeta Athens) → confetti 🎉 → **/app**.
 4. **Dashboard** (`/app`):
@@ -223,4 +223,5 @@ Visual assets licensed by the ZetaQuest team.
     🚀 Mary Lopez — PM & BizDev
 
 🕹️ ZetaQuest — Play the chain.
+
 ---
