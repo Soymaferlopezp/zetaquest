@@ -1,155 +1,153 @@
 // app/api/quests/new/route.ts
 import { NextResponse } from "next/server";
 
-type Quest = { title: string; objectives: string[]; status: "active" | "completed" };
+const WORLDS: Record<number, { key: "ethereum"|"polygon"|"bnb"; name: string }> = {
+  11155111: { key: "ethereum", name: "Ethereum Sepolia" },
+  80002:    { key: "polygon",  name: "Polygon Amoy" },
+  97:       { key: "bnb",      name: "BNB Chain Testnet" },
+};
 
-const MODEL = process.env.GEMINI_MODEL || "gemini-1.5-flash";
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-
-// --- Temas por chain (tono + vocabulario)
-const CHAIN_THEMES: Record<
-  string,
-  { lore: string; verbs: string[]; nouns: string[] }
-> = {
+const PRESETS: Record<"ethereum"|"polygon"|"bnb", { title: string; objectives: string[] }> = {
   ethereum: {
-    lore:
-      "Prime hub of cross-chain research. Security-first, canonical bridges, rollups, and sequencers.",
-    verbs: ["synchronize", "audit", "stabilize", "trace", "attest"],
-    nouns: ["rollup sequencer", "L1 beacon", "canonical bridge", "Merkle root"],
+    title: "ETHEREUM: FINALITY RUN",
+    objectives: [
+      "Bridge or interact with a L2 (Arbitrum/Optimism/Base)",
+      "Sign a message proving account ownership",
+      "Return to Dashboard and claim rewards",
+    ],
   },
   polygon: {
-    lore:
-      "High-throughput side realms. ZK-powered lanes, fast settlement, and efficient data proofs.",
-    verbs: ["optimize", "prove", "compress", "aggregate", "calibrate"],
-    nouns: ["ZK circuit", "aggregator", "state proof", "validity commitment"],
+    title: "POLYGON AMOY: QUANTUM RELAY",
+    objectives: [
+      "Ping a dApp related to ZK scaling or gaming",
+      "Sign a message proving identity",
+      "Return to the Dashboard and claim rewards",
+    ],
   },
   bnb: {
-    lore:
-      "Expedition corridor for explorers. Liquidity routes, staking relays, and MEV beacons.",
-    verbs: ["route", "stake", "reroute", "deflect", "balance"],
-    nouns: ["relay", "staking vault", "liquidity channel", "MEV sensor"],
+    title: "BNB CHAIN: QUANTUM RELAY",
+    objectives: [
+      "Try a low‑fee dApp (DEX, faucet or swap)",
+      "Sign a message proving identity",
+      "Return to the Dashboard and claim rewards",
+    ],
   },
 };
 
-// --- Fallback por si falla Gemini
-function fallbackQuest(chainKey?: string): Quest {
-  const base = CHAIN_THEMES[chainKey || "ethereum"] ?? CHAIN_THEMES.ethereum;
-  const pick = [
-    {
-      title: "Calibrate the Cross-Chain Relay",
-      objectives: [
-        "Scan beacon latency across two networks",
-        "Stabilize the relay oscillator",
-        "Broadcast a synced heartbeat message",
-      ],
-    },
-    {
-      title: "Seal the Proof Channel",
-      objectives: [
-        "Collect three state roots from recent blocks",
-        "Verify commitment integrity on the hub",
-        "Finalize the proof and publish receipt",
-      ],
-    },
-    {
-      title: "Reroute the Liquidity Stream",
-      objectives: [
-        "Trace slippage across the corridor",
-        "Rebalance the vault thresholds",
-        "Confirm safe passage with a test swap",
-      ],
-    },
-  ];
-  const q = pick[Math.floor(Math.random() * pick.length)];
-  return { ...q, status: "active" as const };
+// --- Helpers Gemini ---
+function stripCodeFences(s: string) {
+  return s.trim().replace(/^```(json)?/i, "").replace(/```$/i, "").trim();
 }
-
-async function questFromGemini(
-  chainKey?: string,
-  chainLabel?: string
-): Promise<Quest | null> {
-  if (!GEMINI_API_KEY) return null;
-
-  const { GoogleGenerativeAI } = await import("@google/generative-ai");
-  const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({ model: MODEL });
-
-  const theme = CHAIN_THEMES[chainKey || "ethereum"] ?? CHAIN_THEMES.ethereum;
-
-  // Prompt: inglés, travel + web3, nada infantil
-  const prompt = `
-You generate a short, stylish travel-themed web3 quest for a pixel-art sci‑fi game called "ZetaQuest".
-Language: English. Tone: concise, technical-adventurous. No emojis. No childish or pet content.
-Write strict JSON ONLY (no code fences). Shape:
-
-{
-  "title": "string (max 60 chars)",
-  "objectives": ["string", "string", "string"]
+function pickPreset(worldKey: "ethereum"|"polygon"|"bnb") {
+  return PRESETS[worldKey];
 }
-
-Constraints:
-- Exactly 3 objectives.
-- Each objective: 6–12 words, imperative mood.
-- Use web3/scalability terms appropriately (proofs, bridges, rollups).
-- Keep it chain-aware:
-
-CHAIN CONTEXT:
-- Current chain label: ${chainLabel || "Ethereum"}
-- Lore: ${theme.lore}
-- Suggested verbs: ${theme.verbs.join(", ")}
-- Suggested nouns: ${theme.nouns.join(", ")}
-
-The quest should feel like traveling between realms, syncing systems, or stabilizing cross‑chain routes.
-Examples of good verbs: Align, Validate, Route, Seal, Rebalance, Calibrate, Synchronize, Prove.
-Avoid childish themes like pets or toy robots. Focus on exploration, systems, and proofs.
-`;
-
-  const result = await model.generateContent({
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
+async function callGemini(model: string, apiKey: string, userPrompt: string) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${apiKey}`;
+  const body = {
+    contents: [
+      {
+        role: "user",
+        parts: [{ text: userPrompt }],
+      },
+    ],
     generationConfig: {
-      temperature: 0.8,
-      maxOutputTokens: 220,
-      responseMimeType: "application/json",
+      temperature: 0.7,
+      maxOutputTokens: 256,
     },
+    safetySettings: [
+      { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
+    ],
+  };
+  const r = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
   });
-
-  const text = result.response.text();
-  try {
-    const data = JSON.parse(text) as { title?: string; objectives?: string[] };
-    if (
-      typeof data?.title === "string" &&
-      Array.isArray(data?.objectives) &&
-      data.objectives.length === 3 &&
-      data.objectives.every((o) => typeof o === "string" && o.trim().length > 0)
-    ) {
-      // Post-procesado suave: recorte y mayúscula inicial
-      const clean = (s: string) =>
-        s.trim().replace(/\s+/g, " ").replace(/^([a-z])/, (m) => m.toUpperCase()).slice(0, 120);
-      return {
-        title: clean(data.title).slice(0, 60),
-        objectives: data.objectives.map(clean).slice(0, 3),
-        status: "active",
-      };
-    }
-    return null;
-  } catch {
-    return null;
+  if (!r.ok) {
+    const t = await r.text();
+    throw new Error(`Gemini HTTP ${r.status}: ${t.slice(0, 200)}`);
   }
+  const j = await r.json();
+  const text = j?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  if (!text) throw new Error("Gemini empty response");
+  return stripCodeFences(text);
 }
 
 export async function POST(req: Request) {
   try {
-    // body opcional: { worldId?: number, chainKey?: "ethereum"|"polygon"|"bnb", chainLabel?: string }
     const body = await req.json().catch(() => ({}));
-    const chainKey = (body?.chainKey as string | undefined)?.toLowerCase();
-    const chainLabel = body?.chainLabel as string | undefined;
+    const world: number | undefined = Number(body?.world);
+    const w = WORLDS[world ?? 0] ?? WORLDS[97]; // default BNB si no viene nada
 
-    const aiQuest = await questFromGemini(chainKey, chainLabel);
-    const quest: Quest = aiQuest ?? fallbackQuest(chainKey);
+    // Si no hay API key, usamos preset
+    const apiKey = process.env.GEMINI_API_KEY;
+    const model  = process.env.GEMINI_MODEL || "gemini-1.5-flash";
 
-    return NextResponse.json({ ok: true, quest, ai: !!aiQuest });
+    // Prompt: pídele a Gemini SOLO JSON {title, objectives[], amount}
+    const prompt = `
+You are an assistant for a blockchain quest dapp. Generate ONE short quest for the network: ${w.name} (${w.key}).
+Constraints:
+- 3 concise objectives, actionable in 3–8 minutes each.
+- Safe for testnets; no real funds required.
+- Prefer generic actions (visit dApp, sign message, interact with faucet/DEX on testnet, return to dashboard).
+- Keep it fun and thematic to ${w.name}.
+- Output MUST be valid JSON ONLY (no prose, no backticks).
+
+Schema:
+{
+  "title": "UPPERCASE SHORT TITLE",
+  "objectives": ["...", "...", "..."],
+  "amount": 10
+}
+    `.trim();
+
+    let questFromAI: { title: string; objectives: string[]; amount?: number } | null = null;
+
+    if (apiKey) {
+      try {
+        const raw = await callGemini(model, apiKey, prompt);
+        const parsed = JSON.parse(raw);
+        // Validación mínima
+        if (
+          parsed &&
+          typeof parsed.title === "string" &&
+          Array.isArray(parsed.objectives) &&
+          parsed.objectives.length >= 3
+        ) {
+          questFromAI = {
+            title: String(parsed.title).toUpperCase().slice(0, 64),
+            objectives: parsed.objectives.slice(0, 3).map((s: any) => String(s).slice(0, 120)),
+            amount: Number(parsed.amount) || 10,
+          };
+        }
+      } catch (err) {
+        console.warn("Gemini fallback to preset:", (err as Error).message);
+      }
+    }
+
+    const base = questFromAI ?? pickPreset(w.key);
+    const amount = questFromAI?.amount ?? 10;
+
+    return NextResponse.json({
+      ok: true,
+      quest: {
+        title: base.title,
+        objectives: base.objectives,
+        status: "active",
+        world,
+        amount, // el client lo usa para mostrar +XP
+      },
+    });
   } catch (err: any) {
-    console.error("quests/new error:", err?.message || err);
-    return NextResponse.json({ ok: true, quest: fallbackQuest(), ai: false });
+    // fallback duro
+    return NextResponse.json({
+      ok: true,
+      quest: {
+        title: "OFFLINE QUEST",
+        objectives: ["Try again later", "Keep exploring", "Have fun"],
+        status: "active",
+        amount: 10,
+      },
+    });
   }
 }

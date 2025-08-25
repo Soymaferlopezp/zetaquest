@@ -97,7 +97,7 @@ export default function MintPage() {
   }, [hasNft]);
 
   async function mint() {
-    if (!isConnected) return; // la landing maneja la conexión
+    if (!isConnected) return; // landing maneja la conexión
     if (!NFT_ADDRESS) return alert("Falta NEXT_PUBLIC_NFT_ADDRESS en .env.local");
 
     try {
@@ -207,20 +207,20 @@ export default function MintPage() {
         <HoloCard>
           <div className="p-6">
             <div className="flex items-center gap-3">
-              <Image src={ART.coin} alt="coin" width={24} height={24} />
+              <Image src={ART.coin} alt="coin" width={44} height={44} />
               <h2 className="font-pixel text-xl">MINT YOUR TRAVELER</h2>
             </div>
 
-            <p className="mt-3 text-sm opacity-80">
-              Un NFT por cuenta. Rarezas: Normal (80%), Rare (18%), Epic (2%). Se
-              revela on-chain.
+            <p className="mt-3 text-sm opacity-85">
+              One NFT per wallet. Rarities: Normal (80%)<br />Rare (18%)<br />Epic (2%)<br /><br />Revealed fully on-chain.
             </p>
 
             <ul className="mt-4 space-y-2 text-sm">
               <li>
-                • Red requerida: <span className="font-press">ZetaChain Athens (7001)</span>
-              </li>
-              <li>• Imágenes servidas desde tu app para el MVP</li>
+                • Required network:<span className="font-press">ZetaChain Athens (7001)</span>
+              </li><br />
+              <li>• Dynamic stats: power, defense, and XP update as you play.</li><br />
+              <li>• Cross-chain ready: your Traveler evolves when you journey to other worlds.</li>
             </ul>
 
             {/* Botón → confetti */}

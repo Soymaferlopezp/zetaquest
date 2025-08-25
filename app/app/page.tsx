@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import { useAccount, usePublicClient } from "wagmi";
+import { useAccount } from "wagmi";
 import { useRouter } from "next/navigation";
 import { createPublicClient, http } from "viem";
 
@@ -10,13 +10,30 @@ import WalletConnect from "../../components/wallet-connect";
 import HoloCard from "../../components/HoloCard";
 import PixelBG from "../../components/PixelBG";
 import TravelButton from "../../components/TravelButton";
+import MainnetBadge from "../../components/MainnetBadge";
 
 import { ZETAQUEST_NFT_ABI } from "../lib/abi/zetaquestNft";
 import { zetaAthens, zetaRpc } from "../lib/zeta";
 
+import OnboardingModal from "../../components/OnboardingModal";
+
 /* ========= Helpers ========= */
 function cx(...s: (string | false | undefined)[]) {
   return s.filter(Boolean).join(" ");
+}
+
+/* --- helpers para JSON seguro y elección aleatoria (por si luego vuelves a lista) --- */
+function pick<T>(arr: T[], fallback: T): T {
+  if (!Array.isArray(arr) || arr.length === 0) return fallback;
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+async function safeJson(res: Response) {
+  const ct = res.headers.get("content-type") || "";
+  if (!ct.includes("application/json")) {
+    const text = await res.text();
+    throw new Error(text.slice(0, 280));
+  }
+  return res.json();
 }
 
 /* ========= ASSETS ========= */
@@ -37,11 +54,11 @@ const ART = {
 const WORLDS: Record<number, { key: "ethereum" | "polygon" | "bnb"; label: string; icon: string }> = {
   7001: { key: "ethereum", label: "Zeta (Athens)", icon: ART.ethIcon },
   80002: { key: "polygon", label: "Polygon Amoy", icon: ART.polIcon },
-  97: { key: "bnb", label: "BNB Chain", icon: ART.bnbIcon },
+  97: { key: "bnb", label: "BNB Testnet", icon: ART.bnbIcon },
   11155111: { key: "ethereum", label: "Ethereum Sepolia", icon: ART.ethIcon },
 };
 
-/* ========= Buffs UX ========= */
+/* ========= Buffs UX (decorativo) ========= */
 const CHAIN_BUFFS = {
   ethereum: { power: 1.1, defense: 1.0, xp: 1.0, label: "Ethereum", icon: ART.ethIcon },
   polygon: { power: 1.0, defense: 1.15, xp: 1.0, label: "Polygon", icon: ART.polIcon },
@@ -66,12 +83,14 @@ export default function Dashboard() {
   const [quest, setQuest] = useState<Quest | null>(null);
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [loadingPlayer, setLoadingPlayer] = useState(true);
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [justCompleted, setJustCompleted] = useState(false); // sello visual 1s
 
   // Banner pegajoso (indicador post‑TX)
   const [syncMsg, setSyncMsg] = useState<string>("");
   const [syncVisible, setSyncVisible] = useState<boolean>(false);
 
-  // Last on‑chain (HUD) + history
+  // Last on‑chain (fijo en HUD) + history (últimos 3)
   const [lastOnchain, setLastOnchain] = useState<{ world?: number; p?: number; d?: number; xp?: number } | null>(null);
   const [history, setHistory] = useState<Array<{ ts: number; w: number; p: number; d: number; xp: number }>>([]);
 
@@ -84,7 +103,7 @@ export default function Dashboard() {
   };
 
   /* ------- Selector de red (toggle) ------- */
-  const [selectedWorld, setSelectedWorld] = useState<number>(80002);
+  const [selectedWorld, setSelectedWorld] = useState<number>(80002); // default Polygon Amoy
   const TOGGLE_WORLDS: Array<{ id: number; key: ChainKey; label: string; icon: string }> = [
     { id: 11155111, key: "ethereum", label: "Ethereum", icon: ART.ethIcon },
     { id: 80002, key: "polygon", label: "Polygon Amoy", icon: ART.polIcon },
@@ -93,12 +112,18 @@ export default function Dashboard() {
 
   /* ------- Wallet / RPC ------- */
   const { address, isConnected } = useAccount();
-  const publicClient = usePublicClient();
   const router = useRouter();
+
+  // Cliente DEDICADO a Athens para TODAS las lecturas del NFT/Score
+  const pcAthens = useMemo(() => createPublicClient({ chain: zetaAthens, transport: http(zetaRpc) }), []);
 
   /* ------- NFT visual ------- */
   const [nftImage, setNftImage] = useState<string | null>(null);
   const [nftRarity, setNftRarity] = useState<"Normal" | "Rare" | "Epic" | null>(null);
+
+  /* ------- Estados NFT (evitar redirect loop a /mint) ------- */
+  const [hasNft, setHasNft] = useState<boolean | null>(null); // null=desconocido
+  const [checkingNft, setCheckingNft] = useState<boolean>(false);
 
   /* ------- Stats derivados de UI ------- */
   const buffs = CHAIN_BUFFS[chain];
@@ -109,23 +134,6 @@ export default function Dashboard() {
     const total = xpByChain.ethereum + xpByChain.polygon + xpByChain.bnb;
     return { power, defense, xpChain, total };
   }, [base, buffs, xpByChain, chain]);
-
-  /* ------- Onboarding modal (solo 1ª vez) ------- */
-  const [showIntro, setShowIntro] = useState(false);
-  useEffect(() => {
-    try {
-      const seen = localStorage.getItem("zq:intro:v1");
-      if (!seen) setShowIntro(true);
-    } catch {}
-  }, []);
-  function closeIntro(persist = false) {
-    if (persist) {
-      try {
-        localStorage.setItem("zq:intro:v1", "1");
-      } catch {}
-    }
-    setShowIntro(false);
-  }
 
   /* ------- Helpers ------- */
   function parseDataURIJson(uri: string) {
@@ -141,43 +149,75 @@ export default function Dashboard() {
     return Number.isFinite(n) ? n : def;
   };
 
-  /* ------- API local MVP ------- */
+  /* ------- Helper: refrescar totales por chain desde API ------- */
+  async function refreshPlayerTotals(addr?: string) {
+    if (!addr) return;
+    try {
+      const r = await fetch(`/api/player?address=${addr}&fresh=1`, { cache: "no-store" });
+      const j = await r.json();
+      if (j?.player?.xpByChain) {
+        const nx = j.player.xpByChain as Record<"ethereum" | "polygon" | "bnb", number>;
+        setXpByChain((prev) => ({
+          ethereum: Math.max(prev.ethereum ?? 0, nx.ethereum ?? 0),
+          polygon: Math.max(prev.polygon ?? 0, nx.polygon ?? 0),
+          bnb: Math.max(prev.bnb ?? 0, nx.bnb ?? 0),
+        }));
+      }
+    } catch (e) {
+      console.warn("refreshPlayerTotals error", e);
+    }
+  }
+
+  /* ------- API local MVP (solo inicial; verdad = tokenURI) ------- */
   useEffect(() => {
     (async () => {
       try {
         const url = isConnected && address ? `/api/player?address=${address}` : `/api/player`;
         const r = await fetch(url, { cache: "no-store" });
         const j = await r.json();
-        if (j?.player) setXpByChain(j.player.xpByChain);
+        if (j?.player?.xpByChain) {
+          const nx = j.player.xpByChain as Record<"ethereum" | "polygon" | "bnb", number>;
+          setXpByChain((prev) => ({
+            ethereum: Math.max(prev.ethereum ?? 0, nx.ethereum ?? 0),
+            polygon: Math.max(prev.polygon ?? 0, nx.polygon ?? 0),
+            bnb: Math.max(prev.bnb ?? 0, nx.bnb ?? 0),
+          }));
+        }
       } finally {
         setLoadingPlayer(false);
       }
     })();
   }, [isConnected, address]);
 
-  /* ------- LECTURA ÚNICA: tokenURI del NFT v2 ------- */
+  /* ------- LECTURA Única: tokenURI del NFT v2 (SIEMPRE en Athens) ------- */
   async function refreshFromTokenURI(showIndicator: boolean) {
-    if (!publicClient || !address || !NFT_ADDRESS) return;
+    if (!pcAthens || !address || !NFT_ADDRESS) return;
 
     try {
-      const balance: bigint = await publicClient.readContract({
+      const balance: bigint = await pcAthens.readContract({
         address: NFT_ADDRESS,
         abi: ZETAQUEST_NFT_ABI,
         functionName: "balanceOf",
         args: [address],
       });
+
       if (balance === 0n) {
-        router.replace("/mint");
+        // NO redirigimos; mostramos CTA y limpiamos HUD
+        setHasNft(false);
+        setNftImage(null);
+        setNftRarity(null);
+        setLastOnchain({ world: undefined, p: 10, d: 10, xp: 0 });
         return;
       }
+      setHasNft(true);
 
-      const tokenId: bigint = await publicClient.readContract({
+      const tokenId: bigint = await pcAthens.readContract({
         address: NFT_ADDRESS,
         abi: ZETAQUEST_NFT_ABI,
         functionName: "tokenOfOwnerByIndex",
         args: [address, 0n],
       });
-      const uri: string = await publicClient.readContract({
+      const uri: string = await pcAthens.readContract({
         address: NFT_ADDRESS,
         abi: ZETAQUEST_NFT_ABI,
         functionName: "tokenURI",
@@ -186,10 +226,12 @@ export default function Dashboard() {
       const meta = parseDataURIJson(uri);
       if (!meta) return;
 
+      // Imagen + rareza
       if (meta?.image) setNftImage(meta.image);
       const rarityAttr = (meta?.attributes || []).find((a: any) => `${a?.trait_type}`.toLowerCase() === "rarity");
       if (rarityAttr?.value) setNftRarity(rarityAttr.value as any);
 
+      // Atributos dinámicos v2
       const getAttr = (name: string) =>
         (meta.attributes as any[]).find((x: any) => `${x?.trait_type}`.toLowerCase() === name.toLowerCase())?.value;
 
@@ -198,12 +240,22 @@ export default function Dashboard() {
       const buffD = num(getAttr("buff_defense"));
       const xpVal = num(getAttr("xp"));
 
+      // WORLD para UX
       const worldMeta = WORLDS[worldId];
       if (worldMeta) setChain(worldMeta.key);
 
+      // base (10 + buff)
       setBase({ power: 10 + buffP, defense: 10 + buffD });
-      if (worldMeta) setXpByChain((prev) => ({ ...prev, [worldMeta.key]: xpVal }));
 
+      // XP visual asignada a la chain actual (según WORLD) — nunca reducir
+      if (worldMeta)
+        setXpByChain((prev) => {
+          const cur = prev[worldMeta.key] ?? 0;
+          const next = Math.max(cur, xpVal);
+          return { ...prev, [worldMeta.key]: next };
+        });
+
+      // Last on‑chain fijo + history
       setLastOnchain({ world: worldId || undefined, p: 10 + buffP, d: 10 + buffD, xp: xpVal });
       if (worldId) {
         setHistory((h) => {
@@ -212,8 +264,13 @@ export default function Dashboard() {
         });
       }
 
+      // Indicador pegajoso SOLO post‑TX
       if (showIndicator) {
-        const msg = `On-chain ✔ WORLD=${worldId || "?"} • P=${10 + buffP} • D=${10 + buffD} • XP=${xpVal}`;
+        const p = 10 + buffP,
+          d = 10 + buffD;
+        const msg = `On‑chain ✔ WORLD=${worldId || "?"} • P=${p} (${buffP >= 0 ? "+" : ""}${buffP}) • D=${d} (${
+          buffD >= 0 ? "+" : ""
+        }${buffD}) • XP=${xpVal}`;
         setSyncMsg(msg);
         setSyncVisible(true);
         setTimeout(() => setSyncVisible(false), 25000);
@@ -223,125 +280,162 @@ export default function Dashboard() {
     }
   }
 
+  // Carga inicial desde tokenURI
   useEffect(() => {
     refreshFromTokenURI(false);
-  }, [publicClient, address]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pcAthens, address]);
 
-  // Eventos (defer para evitar setState durante render de otro componente)
+  // Escuchar evento post‑viaje y refrescar tokenURI + totales por chain
   useEffect(() => {
     function onSync() {
-      requestAnimationFrame(() => refreshFromTokenURI(true));
+      refreshFromTokenURI(true);
+      if (address) refreshPlayerTotals(address); // ETH/Polygon/BNB
     }
     window.addEventListener("zq:sync", onSync);
     return () => window.removeEventListener("zq:sync", onSync);
-  }, [publicClient, address]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pcAthens, address]);
 
+  // Re-chequea NFT al enfocar pestaña o tras minteo (evento zq:minted)
+  useEffect(() => {
+    function onFocus() {
+      if (address && NFT_ADDRESS) {
+        setCheckingNft(true);
+        refreshFromTokenURI(false).finally(() => setCheckingNft(false));
+      }
+    }
+    function onMinted() {
+      if (address) {
+        setCheckingNft(true);
+        refreshFromTokenURI(true).finally(() => setCheckingNft(false));
+      }
+    }
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("zq:minted", onMinted);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("zq:minted", onMinted);
+    };
+  }, [address]);
+
+  // Escuchar evento de animación de viaje
   useEffect(() => {
     function onTravelDone(e: any) {
       const world: number | undefined = e?.detail?.world;
       const src = world ? TRAVEL_SPRITE_BY_WORLD[world] : undefined;
       if (!src) return;
-      requestAnimationFrame(() => {
-        setTravelAnim({ visible: true, src });
-        setTimeout(() => setTravelAnim({ visible: false, src: "" }), 1600);
-      });
+      setTravelAnim({ visible: true, src });
+      setTimeout(() => setTravelAnim({ visible: false, src: "" }), 1600);
     }
     window.addEventListener("zq:travel:done", onTravelDone);
     return () => window.removeEventListener("zq:travel:done", onTravelDone);
   }, []);
 
-  /* ------- Quests (UI/MVP) ------- */
+  /* ------- Quests (IA Gemini) ------- */
   async function newQuest() {
     try {
-      const r = await fetch("/api/quests/new", {
+      // Vamos directo a Gemini (tu endpoint existente)
+      const r2 = await fetch("/api/quests/new", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          worldId: selectedWorld,
-          chainKey: chain, // "ethereum" | "polygon" | "bnb"
-          chainLabel: CHAIN_BUFFS[chain].label,
-        }),
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ world: selectedWorld }),
       });
-      const j = await r.json();
-      if (j.quest) setQuest(j.quest as Quest);
+      const j2 = await safeJson(r2);
+      if (j2?.quest) {
+        setQuest({ ...(j2.quest as any), amount: j2.quest?.amount ?? 10 });
+        return;
+      }
+      throw new Error("No quest returned");
     } catch {
       setQuest({
         title: "Offline Quest",
         objectives: ["Try again later", "Keep exploring", "Have fun"],
         status: "active",
-      });
+        amount: 10,
+      } as any);
     }
   }
+
   async function rerollQuest() {
     await newQuest();
   }
 
   async function completeQuest() {
-    if (!quest || !address) return;
+    if (!quest || !address || isCompleting) return;
 
-    setQuest({ ...quest, status: "completed" });
+    const amount = (quest as any).amount ?? 10;
+    setIsCompleting(true);
+
+    // Sello visual 1s pero sin bloquear la misión
+    setJustCompleted(true);
+    setTimeout(() => setJustCompleted(false), 1000);
 
     try {
       const r = await fetch("/api/quests/complete", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ player: address, amount: 10 }),
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          player: address,
+          amount,
+          title: quest.title,
+        }),
       });
-      const j = await r.json();
 
-      if (j?.ok) {
-        setTimeout(() => {
-          window.dispatchEvent(new Event("zq:sync"));
-          refreshFromTokenURI(true);
-        }, 1800);
+      // parseo tolerante
+      const ct = r.headers.get("content-type") || "";
+      let payload: any = null;
+      if (ct.includes("application/json")) {
+        payload = await r.json();
       } else {
-        console.warn("addXp failed", j);
+        const txt = await r.text();
+        payload = { error: txt.slice(0, 500) };
       }
-    } catch (e) {
-      console.warn("addXp error", e);
+
+      console.log("completeQuest payload:", payload);
+
+      const success = payload?.ok === true || (payload?.newTotal && isFinite(Number(payload.newTotal)));
+      if (!r.ok || !success) {
+        console.warn("addXp failed:", payload?.error || "unknown");
+        alert(`XP failed:\n${payload?.error ?? r.statusText}`);
+        return;
+      }
+
+      // ⬆️ Actualiza HUD inmediatamente con el total global (se refleja en todas las chains)
+      setXpByChain((prev) => {
+        const next = Number(payload?.newTotal);
+        if (Number.isFinite(next)) {
+          return { ethereum: next, polygon: next, bnb: next };
+        }
+        const inc = amount ?? 0;
+        return {
+          ethereum: (prev.ethereum ?? 0) + inc,
+          polygon: (prev.polygon ?? 0) + inc,
+          bnb: (prev.bnb ?? 0) + inc,
+        };
+      });
+
+      // Re‑sync adicional (tokenURI/historial, sin bajar valores por Math.max)
+      setTimeout(() => window.dispatchEvent(new Event("zq:sync")), 1200);
+
+      // animación
+      setShowLevelUp(true);
+      setTimeout(() => setShowLevelUp(false), 1100);
+    } catch (e: any) {
+      console.warn("addXp error:", e?.message || e);
+      alert(`XP error:\n${e?.message ?? String(e)}`);
+    } finally {
+      setIsCompleting(false);
     }
-
-    setShowLevelUp(true);
-    setTimeout(() => setShowLevelUp(false), 1100);
   }
-
-  /* ------- Guard NFT ------- */
-  useEffect(() => {
-    (async () => {
-      try {
-        if (!isConnected || !address || !NFT_ADDRESS) return;
-        const pc = createPublicClient({ chain: zetaAthens, transport: http(zetaRpc) });
-        const bal: bigint = await pc.readContract({
-          address: NFT_ADDRESS,
-          abi: ZETAQUEST_NFT_ABI,
-          functionName: "balanceOf",
-          args: [address],
-        });
-        if (bal === 0n) router.replace("/mint");
-      } catch (err) {
-        console.warn("Guard NFT: lectura falló, no redirijo a /mint", err);
-      }
-    })();
-  }, [isConnected, address, router]);
-
-  /* ------- Robustez: mundo válido ------- */
-  useEffect(() => {
-    const valid = [11155111, 80002, 97];
-    if (!valid.includes(selectedWorld)) setSelectedWorld(80002);
-  }, [selectedWorld]);
-
-  const readyToTravel = isConnected && !!selectedWorld;
 
   /* ====== UI ====== */
   return (
     <main className="relative min-h-screen text-white">
-      {/* BG al fondo, sin capturar eventos */}
-      <div className="absolute inset-0 -z-20 pointer-events-none">
-        <PixelBG />
-      </div>
+      <PixelBG />
 
       {/* Header */}
-      <header className="relative z-10 px-4 py-4 flex items-center justify-between">
+      <header className="px-4 py-4 flex items-center justify-between">
         <div className="font-pixel text-lg drop-shadow">ZETAQUEST – DASHBOARD</div>
         <div className="flex items-center gap-3">
           {syncVisible && (
@@ -357,15 +451,15 @@ export default function Dashboard() {
       </header>
 
       {/* HUD superior */}
-      <section className="relative z-10 mx-auto max-w-6xl px-4">
+      <section className="mx-auto max-w-6xl px-4">
         <HoloCard>
-          <div className="grid gap-3 md:grid-cols-4 p-3">
+          <div className="grid gap-3 md:grid-cols-[1.1fr_1.1fr_1.1fr_auto] p-3 items-start">
             {/* NFT */}
             <div className="flex items-center gap-3 rounded-xl p-3">
-              <div className="relative h-10 w-10 overflow-hidden rounded-lg ring-1 ring-white/10">
+              <div className="relative h-20 w-20 overflow-hidden rounded-lg ring-1 ring-white/10">
                 <Image src={nftImage ?? ART.traveler} alt="nft" fill className="object-cover" unoptimized />
               </div>
-              <div className="text-xs leading-tight">
+              <div className="text-xs">
                 <div className="font-pixel">NFT</div>
                 <div className="opacity-80">{nftRarity ? `Traveler • ${nftRarity}` : "Traveler"}</div>
               </div>
@@ -373,20 +467,16 @@ export default function Dashboard() {
 
             {/* WORLD */}
             <div className="flex items-center gap-3 rounded-xl p-3">
-              <Image src={CHAIN_BUFFS[chain].icon} alt="world" width={18} height={18} />
-              <div className="text-xs leading-tight">
-                <div className="font-pixel capitalize">{CHAIN_BUFFS[chain].label}</div>
-                {lastOnchain && (
-                  <div className="text-[10px] opacity-80 mt-1">
-                    On-chain: W={lastOnchain.world} • P={lastOnchain.p} • D={lastOnchain.d} • XP={lastOnchain.xp}
-                  </div>
-                )}
+              <Image src={CHAIN_BUFFS[chain].icon} alt="world" width={45} height={45} />
+              <div className="text-xs">
+                <div className="font-pixel">WORLD</div>
+                <div className="opacity-80 capitalize">{CHAIN_BUFFS[chain].label}</div>
               </div>
             </div>
 
             {/* BUFF */}
             <div className="flex items-center gap-3 rounded-xl p-3">
-              <div className="text-xs leading-tight">
+              <div className="text-xs">
                 <div className="font-pixel">BUFF</div>
                 <div className="opacity-80 flex gap-3">
                   <span>{Math.round((CHAIN_BUFFS[chain].power - 1) * 100)}% Pow</span>
@@ -396,20 +486,34 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* STATS / ZetaPoints con iconos debajo */}
-            <div className="flex items-center justify-between rounded-xl p-3">
-              <div className="text-xs leading-tight">
-                <div className="font-pixel">STATS</div>
-                <div className="opacity-80">P {stats.power} • D {stats.defense}</div>
+            {/* STATS */}
+            <div className="relative flex flex-col items-end text-right">
+              {/* pill tooltip */}
+              <div className="absolute -top-1 -right-2">
+                <div className="rounded-lg bg-white/10 border border-white/15 px-2 py-[2px] text-[10px] leading-tight whitespace-nowrap backdrop-blur-sm">
+                  <span className="opacity-80">ZetaPoints</span>
+                  <span className="mx-1 opacity-50">=</span>
+                  <span className="opacity-80">XP</span>
+                  <span className="mx-1 opacity-50">×</span>
+                  <span className="opacity-80">buff</span>
+                </div>
               </div>
 
-              <div className="text-right">
-                <div className="text-[10px] opacity-80">ZetaPoints (XP)</div>
-                <div className="font-pixel text-2xl leading-none">{stats.xpChain}</div>
-                <div className="mt-1 flex justify-end gap-2">
-                  <img src={ART.coin} alt="coin" width={22} height={22} className="shrink-0" />
-                  <img src={CHAIN_BUFFS[chain].icon} alt={CHAIN_BUFFS[chain].label} width={22} height={22} className="shrink-0" />
+              {/* wrapper con margin-top */}
+              <div className="mt-3 flex flex-col items-end gap-1">
+                {/* número grande */}
+                <div className="font-pixel text-2xl leading-none drop-shadow-[0_1px_0_rgba(0,0,0,.6)]">
+                  {stats.xpChain}
                 </div>
+
+                {/* iconos */}
+                <div className="mt-1 flex items-center gap-2 opacity-90">
+                  <Image src={ART.coin} alt="coin" width={38} height={38} />
+                  <Image src={CHAIN_BUFFS[chain].icon} alt="network" width={38} height={38} />
+                </div>
+
+                {/* total */}
+                <div className="text-[10px] opacity-70 mt-1">Total: {stats.total}</div>
               </div>
             </div>
           </div>
@@ -430,8 +534,23 @@ export default function Dashboard() {
         </HoloCard>
       </section>
 
+      {/* CTA: no NFT */}
+      {hasNft === false && (
+        <div className="mx-auto max-w-6xl px-4 mt-3">
+          <div className="rounded-xl border border-white/15 bg-white/5 p-4 flex items-center justify-between">
+            <div className="text-sm opacity-90">
+              You don’t have a Traveler yet. Mint one to start earning XP and ZetaPoints.
+              {checkingNft && <span className="ml-2 text-xs opacity-70">Checking…</span>}
+            </div>
+            <a href="/mint" className="font-press px-4 py-2 rounded-xl bg-cyan-400 text-black hover:brightness-110">
+              Mint your Traveler
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* Cuerpo */}
-      <section className="relative z-10 mx-auto max-w-6xl p-4 grid md:grid-cols-3 gap-6 mt-4">
+      <section className="mx-auto max-w-6xl p-4 grid md:grid-cols-3 gap-6 mt-4">
         {/* IZQ */}
         <HoloCard className="md:col-span-1">
           <div className="p-4">
@@ -449,7 +568,7 @@ export default function Dashboard() {
                 <div className="font-pixel text-xl">{stats.defense}</div>
               </div>
               <div>
-                <div className="text-[10px] opacity-70">ZetaPoints (XP)</div>
+                <div className="text-[10px] opacity-70">ZetaPoints</div>
                 <div className="font-pixel text-xl">{stats.xpChain}</div>
                 <div className="text-[10px] opacity-60 mt-1">Total: {stats.total}</div>
               </div>
@@ -458,7 +577,7 @@ export default function Dashboard() {
             <div className="mt-4 flex items-center gap-2">
               <Image src={CHAIN_BUFFS[chain].icon} alt={CHAIN_BUFFS[chain].label} width={18} height={18} />
               <div className="text-sm">
-                Current world: <span className="font-pixel capitalize">{CHAIN_BUFFS[chain].label}</span>
+                Wold: <span className="font-pixel capitalize">{CHAIN_BUFFS[chain].label}</span>
               </div>
             </div>
 
@@ -474,7 +593,7 @@ export default function Dashboard() {
                         key={w.id}
                         onClick={() => {
                           setSelectedWorld(w.id);
-                          setChain(w.key);
+                          setChain(w.key); // UX adelantada
                         }}
                         className={cx(
                           "flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs transition",
@@ -490,14 +609,11 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* BOTÓN TRAVEL */}
-              <div className="relative z-40 isolate">
-                <div className="w-full pointer-events-auto">
-                  <TravelButton key={`${selectedWorld}-${address || "na"}`} dstChainId={selectedWorld} />
+              {/* BOTÓN TRAVEL al destino seleccionado */}
+              <div className="flex">
+                <div className="w-full">
+                  <TravelButton key={`${address ?? "no"}-${selectedWorld}`} dstChainId={selectedWorld} />
                 </div>
-                {!readyToTravel && (
-                  <div className="absolute inset-0 rounded-xl bg-transparent pointer-events-none" />
-                )}
               </div>
             </div>
           </div>
@@ -527,9 +643,7 @@ export default function Dashboard() {
                     </span>
                     <h2 className="font-pixel text-xl">{quest.title}</h2>
                   </div>
-                  {quest.status === "completed" && (
-                    <Image src={ART.quest} alt="Quest Complete" width={160} height={42} unoptimized />
-                  )}
+                  {justCompleted && <Image src={ART.quest} alt="Quest Complete" width={160} height={42} unoptimized />}
                 </div>
 
                 <div className="mt-4 grid md:grid-cols-3 gap-3">
@@ -542,87 +656,39 @@ export default function Dashboard() {
                 </div>
 
                 <div className="mt-6 flex gap-3">
-                  {quest.status === "active" ? (
-                    <>
-                      <button
-                        onClick={completeQuest}
-                        className="font-press px-4 py-3 rounded-xl bg-emerald-400 text-black hover:brightness-110"
-                      >
-                        Complete Quest (+10 ZP)
-                      </button>
-                      <button
-                        onClick={rerollQuest}
-                        className="font-press px-4 py-3 rounded-xl bg-white/10 hover:bg-white/15"
-                      >
-                        New Gemini Quest
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={newQuest}
-                      className="font-press px-4 py-3 rounded-xl bg-cyan-400 text-black hover:brightness-110"
-                    >
-                      New Gemini Quest
-                    </button>
-                  )}
+                  <button
+                    onClick={completeQuest}
+                    disabled={isCompleting}
+                    className="font-press px-4 py-3 rounded-xl bg-emerald-400 text-black hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isCompleting ? "Completing..." : `Complete Quest (+${(quest as any)?.amount ?? 10} XP)`}
+                  </button>
+                  <button
+                    onClick={rerollQuest}
+                    className="font-press px-4 py-3 rounded-xl bg-white/10 hover:bg-white/15"
+                  >
+                    New Gemini Quest
+                  </button>
                 </div>
+
+                {/* Mainnet Badge block */}
+                <MainnetBadge worldId={lastOnchain?.world ?? selectedWorld} xpSnapshot={stats.total} />
               </div>
             )}
           </div>
         </HoloCard>
       </section>
 
-      {/* Intro Modal */}
-      {showIntro && (
-        <div className="fixed inset-0 z-[9000]">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
-          <div className="relative z-10 h-full w-full grid place-items-center p-4">
-            <div className="w-full max-w-xl rounded-2xl border border-white/15 bg-black/80 p-5 shadow-2xl">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-pixel text-lg">Welcome to ZetaQuest</h3>
-                <button
-                  onClick={() => closeIntro(false)}
-                  className="text-sm px-2 py-1 rounded bg-white/10 hover:bg-white/15"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <ul className="space-y-3 text-sm leading-5">
-                <li>1) <b>Connect your wallet</b> (top-right).</li>
-                <li>2) <b>Travel on‑chain</b>: pick a world (Ethereum / Polygon / BNB) and press <i>Travel</i>.</li>
-                <li>3) Click <b>New Gemini Quest</b> to generate an AI quest (English, web3/travel themed).</li>
-                <li>4) <b>Complete Quest</b> → earns <b>ZetaPoints</b> (XP) on‑chain.</li>
-                <li>5) HUD: Power/Defense and <b>ZetaPoints</b>. Note: ZP = XP × world buff.</li>
-              </ul>
-
-              <div className="mt-5 flex items-center justify-between">
-                <label className="flex items-center gap-2 text-xs opacity-80">
-                  <input
-                    type="checkbox"
-                    onChange={(e) => e.target.checked
-                      ? localStorage.setItem("zq:intro:v1", "1")
-                      : localStorage.removeItem("zq:intro:v1")}
-                  />
-                  Don’t show again
-                </label>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => closeIntro(true)}
-                    className="font-press px-4 py-2 rounded-lg bg-cyan-400 text-black hover:brightness-110"
-                  >
-                    Start
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* Overlay LEVEL UP */}
+      {showLevelUp && (
+        <div className="pointer-events-none fixed inset-0 grid place-items-center z-[90]">
+          <Image src={ART.levelup} alt="LEVEL UP" width={420} height={120} className="animate-[fade_1.1s_ease-out]" />
         </div>
       )}
 
       {/* Overlay TRAVEL BURST */}
       {travelAnim.visible && (
-        <div className="pointer-events-none fixed inset-0 z-[9500] grid place-items-center">
+        <div className="pointer-events-none fixed inset-0 grid place-items-center z-[80]">
           <div className="absolute inset-0 bg-black/40 animate-[fadeBg_1.6s_ease]" />
           <img
             src={travelAnim.src}
@@ -640,21 +706,15 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Overlay LEVEL UP (encima de todo y nítido) */}
-      {showLevelUp && (
-        <div className="pointer-events-none fixed inset-0 z-[9999] grid place-items-center">
-          <Image
-            src={ART.levelup}
-            alt="LEVEL UP"
-            width={420}
-            height={120}
-            className="animate-[fade_1.1s_ease-out] drop-shadow-[0_0_24px_rgba(255,255,255,0.6)]"
-            priority
-          />
-        </div>
-      )}
+      <OnboardingModal />
 
       <style>{`
+        @keyframes fade {
+          0% { opacity: 0; transform: scale(0.95); }
+          10% { opacity: 1; transform: scale(1.02); }
+          90% { opacity: 1; }
+          100% { opacity: 0; transform: scale(1); }
+        }
         @keyframes fadeBg {
           0% { opacity: 0; }
           10% { opacity: 1; }

@@ -1,14 +1,40 @@
-// lib/abi/scoreV2.ts
-
 export const SCORE_V2_ABI = [
   {
-    type: "function",
-    name: "addXp",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "player", type: "address" },
-      { name: "amount", type: "uint256" },
-    ],
-    outputs: [],
+    "inputs": [{"internalType":"address","name":"_owner","type":"address"}],
+    "stateMutability":"nonpayable","type":"constructor"
   },
+  {
+    "anonymous":false,"inputs":[
+      {"indexed":true,"internalType":"address","name":"player","type":"address"},
+      {"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},
+      {"indexed":false,"internalType":"uint256","name":"newTotal","type":"uint256"}
+    ],
+    "name":"XpAdded","type":"event"
+  },
+  {
+    "anonymous":false,"inputs":[
+      {"indexed":true,"internalType":"address","name":"player","type":"address"},
+      {"indexed":false,"internalType":"string","name":"title","type":"string"},
+      {"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}
+    ],
+    "name":"QuestCompleted","type":"event"
+  },
+  {
+    "inputs":[
+      {"internalType":"address","name":"player","type":"address"},
+      {"internalType":"uint256","name":"amount","type":"uint256"},
+      {"internalType":"string","name":"title","type":"string"}
+    ],
+    "name":"addXpAndLog","outputs":[],"stateMutability":"nonpayable","type":"function"
+  },
+  {
+    "inputs":[{"internalType":"address","name":"player","type":"address"}],
+    "name":"getXp","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],
+    "stateMutability":"view","type":"function"
+  },
+  {
+    "inputs":[{"internalType":"address","name":"","type":"address"}],
+    "name":"xpOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],
+    "stateMutability":"view","type":"function"
+  }
 ] as const;

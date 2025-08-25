@@ -1,132 +1,69 @@
-(await adapter.score()).toString();
-await (await adapter.setScore("<SCORE_V2_ADDRESS_AQUI>")).wait();
-adapter = new ethers.Contract(ADAPTER, adapterFullAbi, owner);
-owner = (await ethers.getSigners())[0];
+(await ethers.provider.getBalance("0x90B3EA700173274560182CbF76ED8E6E66Ad2494")).toString()
+const SCORE_V2_ADDRESS = "0xabF095e6EAFD0884f23f444da6b7482876CFB965";
+const SCORE = "0xabF095e6EAFD0884f23f444da6b7482876CFB965";
+)
+  "smoke test"
+  1,
+  "0x9Ef6454D7895b89275d3cADAB27FB4802AEf4A07",
+await c2.callStatic.addXpAndLog(
+(await c2.xpOf("0x9Ef6454D7895b89275d3cADAB27FB4802AEf4A07")).toString()
+const c2 = await ethers.getContractAt(abiScore, SCORE);
 ];
-  {"inputs":[{"type":"address"}],"name":"setScore","outputs":[],"stateMutability":"nonpayable","type":"function"}
-  {"inputs":[],"name":"score","outputs":[{"type":"address"}],"stateMutability":"view","type":"function"},
-const adapterFullAbi = [
-adapter = new ethers.Contract(ADAPTER, adapterAbi, ethers.provider);
-];
-  { "inputs": [], "name": "score", "outputs": [{"type":"address"}], "stateMutability":"view", "type":"function" }
-const adapterAbi = [
-const ADAPTER = "0x9935A8feA86C301453d30F3957C4976eE64c2CD8";
-({ world, buffP, buffD, xp, P: 10 + buffP, D: 10 + buffD });
-xp    = Number(getAttr("xp") || 0);
-buffD = Number(getAttr("buff_defense") || 0);
-buffP = Number(getAttr("buff_power") || 0);
-world = Number(getAttr("world"));
-getAttr = (name) => (json.attributes||[]).find(a => String(a.trait_type).toLowerCase() === name.toLowerCase())?.value;
-json = JSON.parse(Buffer.from(uri.split(",")[1], "base64").toString("utf8"));
-uri = await nft.tokenURI(tokenId);
-tokenId = await nft.tokenOfOwnerByIndex(player, 0n);
-bal = await nft.balanceOf(player);    
+  "function addXpAndLog(address player, uint256 amount, string title)"
+  "function xpOf(address) view returns (uint256)",
+const abiScore = [
+(await c.owner()).toString()
+const c = await ethers.getContractAt(abiOwn, SCORE);
+const abiOwn = ["function owner() view returns (address)"];
+const SCORE = "0xabF095e6EAFD0884f23f444da6b7482876CFB965";
+(await c.owner()).toString(
+const c = await ethers.getContractAt(abiOwn, SCORE);
+const abiOwn = ["function owner() view returns (address)"];
+const SCORE = "0xabF095e6EAFD0884f23f444da6b7482876CFB965";
+console.log("balance =", (await nft.balanceOf(PLAYER)).toString());
 );
-  process.env.NEXT_PUBLIC_NFT_ADDRESS || "0x3DbAfeC83B70a60A0d2e0Fcc984a500fdAEAdDFF"
-  "ZetaQuestNFTv2",
-nft = await ethers.getContractAt(
-player = "0x90B3EA700173274560182CbF76ED8E6E66Ad2494";
-({ world, buffP, buffD, xp, P: 10 + buffP, D: 10 + buffD });
-const xp    = Number(get("xp") || 0);
-const buffD = Number(get("buff_defense") || 0);
-const buffP = Number(get("buff_power") || 0);
-const world = Number(get("world"));
-const get = (name) => (json.attributes||[]).find(a => String(a.trait_type).toLowerCase() === name.to
-json;
-const json = JSON.parse(Buffer.from(uri.split(",")[1], "base64").toString("utf8"));
-uri;
-tokenId.toString();
-const tokenId = await nft.tokenOfOwnerByIndex(player, 0n);
-bal.toString
-const bal = await nft.balanceOf(player);
-);
-  process.env.NEXT_PUBLIC_NFT_ADDRESS || "0x3DbAfeC83B70a60A0d2e0Fcc984a500fdAEAdDFF"
-  "ZetaQuestNFTv2",
-nft = await ethers.getContractAt(
-const player = "0x90B3EA700173274560182CbF76ED8E6E66Ad2494";
-npx hardhat console --network zetachain_testnet
-const json = JSON.parse(Buffer.from(uri.split(",")[1], "base64").toString("utf8"))
-const tokenconst uri = await nft.tokenURI(tokenId)
-const bal = await nft.balanceOf(player)
-);
-  process.env.NEXT_PUBLIC_NFT_ADDRESS || "0x3DbAfeC83B70a60A0d2e0Fcc984a500fdAEAdDFF"
-  "ZetaQuestNFTv2",
+  nftAddr
+   "function tokenOfOwnerByIndex(address,uint256) view returns (uint256)"],
+  ["function balanceOf(address) view returns (uint256)",
 const nft = await ethers.getContractAt(
-(await score.xpOf(player)).toString()
-const player = "0x90B3EA700173274560182CbF76ED8E6E66Ad2494";
+console.log("allowed 80002 =", await core.allowedDstChains(80002));
+console.log("has code?", (await ethers.provider.get
+console.log("core.questNFT =", nftAddr);
+const nftAddr = await core.questNFT();
+const core = await ethers.getContractAt("ZetaQuestCore", CORE);
+const PLAYER = "0x9Ef6454D7895b89275d3cADAB27FB4802AEf4A07";
+const CORE   = "0xA9629dDFc4E2394f983c937516f9CD7D1e7F84aa";
+console.log("balance =", (await nft.balanceOf(PLAYER)).toString());
 );
-  process.env.SCORE_ADDRESS || "0xabF095e6EAFD0884f23f444da6b7482876CFB965"
-  "ScoreV2",
-const score = await ethers.getContractAt(
-);
-  "0xabF095e6EAFD0884f23f444da6b7482876CFB965"
-  "ScoreV2", 
-score = await ethers.getContractAt(
-);
-  "0xabF095e6EAFD0884f23f444da6b7482876CFB965"
-  "Score",
-score = await ethers.getContractAt(
-const player = "0x90B3EA700173274560182CbF76ED8E6E66Ad2494";
-(await score.xpOf(player)).toString();
-);
-  "0xabF095e6EAFD0884f23f444da6b7482876CFB965"
-  "Score",
-score = await ethers.getContractAt(
-const player = "0x90B3EA700173274560182CbF76ED8E6E66Ad2494";
-npx hardhat console --network zetachain_testnet
-const player = 
-);
-  process.env.SCORE_ADDRESS || "0xabF095e6EAFD0884f23f444da6b7482876CFB965"
-  "Score",                           // o "ScoreV2" si migraste
-const score = await ethers.getContractAt(
-const player = "0x90B3EA700173274560182CbF76ED8E6E66Ad2494";
-);
-  process.env.SCORE_ADDRESS || "0xabF095e6EAFD0884f23f444da6b7482876CFB965"
-  "Score",                           // o "ScoreV2" si migraste
-const score = await ethers.getContractAt(
-);
-  process.env.SCORE_ADDRESS || "0xabF095e6EAFD0884f23f444da6b7482876CFB965"
-  "Score",                           // o "ScoreV2" si migraste
-const score = await ethers.getContractAt(
-(await core.allowedDstChains(11155111)).toString()
-const core = await ethers.getContractAt("ZetaQuestCore","0xA9629dDFc4E2394f983c937516f9CD7D1e7F84aa");
-await core.getPlayerState("0x90B3EA700173274560182CbF76ED8E6E66Ad2494");
-const core = await ethers.getContractAt("ZetaQuestCore","0xA9629dDFc4E2394f983c937516f9CD7D1e7F84aa");
-console.log("Travel tx hash:", tx.hash);
-);
-  500000 // gas limit para el cross-chain
-  "0x83A4D13383abec847816F2C35562232A3B835D44", // contrato Light
-  80002, // chainId de Amoy
-const tx = await core.travelTo(
-  console.log("⚠️ Ya estabas registrado");
-} catch (e) {
-  console.log("✅ Registrado");
-  await tx.wait();
-  const tx = await core.register();
-try {
-const core = await ethers.getContractAt("ZetaQuestCore", coreAddr);
-const coreAddr = "0xA9629dDFc4E2394f983c937516f9CD7D1e7F84aa";
-(await core.travelTo(80002, "0x83A4D13383abec847816F2C35562232A3B835D44", 500000)).hash
-try { (await (await core.register()).wait()); } catch (e)
-const core = await ethers.getContractAt("ZetaQuestCore","0xA9629dDFc4E2394f983c937516f9CD7D1e7F84aa");
-await core.allowedDstChains(80002)
-try { await core.allowedDstChains(80002); }
-try { await core.nft(); } catch{}
-await nft.core()
-await nft.owner()
-const core = await ethers.getContractAt("ZetaQuestCore", coreAddr);
-const nft  = await ethers.getContractAt("ZetaQuestNFT",  nftAddr);
-(await ethers.provider.getCode(coreAddr)) !== "0x"
-(await ethers.provider.getCode(nftAddr))  !== "0x"
-const coreAddr = "0xA9629dDFc4E2394f983c937516f9CD7D1e7F84aa";
-const nftAddr  = "0x2274c62517e02fCb319D9702375974f978fE4E47";
-exit
-(await nft.owner()).toString() 
-const nft = await ethers.getContractAt("ZetaQuestNFT", nftAddr);
-const nftAddr = "0x2274c62517e02fCb319D9702375974f978fE4E47";
-(await ethers.provider.getBalance(signer.address)).toString()
-const [signer] = await ethers.getSigners();
-signer.address
-const [signer] = await ethers.getSigners();
-signer(await ethers.provider.getBalance(signer.address)).toString()
-const [signer] = await ethers.getSigners();
+  nftAddr
+   "function tokenOfOwnerByIndex(address,uint256) view returns (uint256)"],
+  ["function balanceOf(address) view returns (uint256)",
+const nft = await ethers.getContractAt(
+console.log("allowed 80002 =", await core.allowedD
+console.log("has code?", (await ethers.provider.get
+console.log("core.questNFT =", nftAddr);
+const nftAddr = await core.questNFT();
+const core = await ethers.getContractAt("ZetaQuestCore", CORE);
+const PLAYER = "0x9Ef6454D7895b89275d3cADAB27FB4802AEf4A07";
+const PLAYER =0x9Ef6454D7895b89275d3cADAB27FB4802AEf4A07;
+const CORE =0xA9629dDFc4E2394f983c937516f9CD7D1e7F84aa;
+const score = await ethers.getContract
+const SCORE = "0x0x120Aa7A6e13dfb2B51F190da54D4f86B0949fd85";
+const score = await ethers.getContractAt("ScoreV2", SCORE); 
+const SCORE=0x0x120Aa7A6e13dfb2B51F190da54D4f86B0949fd85;
+const SCORE = "0x0x120Aa7A6e13dfb2B51F190da54D4f86B0949fd85";
+try { console.log("DESPUÉS:", (await nft.tokenURI(0)).toString()); } catch(e) {}
+await nft.setBaseURI("https://ipfs.io/ipfs/bafybeid25uxtoc4dk7lga3fz7r5v3lqysyz5bcmfcusdxhfhfphx6jqb7e/traveler-");
+try { console.log("ANTES:", (await nft.tokenURI(0)).toString()); } catch(e) { console.log("No pude leer tokenURI(0), no pasa nada"); }
+const nft = await ethers.getContractAt("ZetaQuestNFT", addr);
+const addr = 0x3DbAfeC83B70a60A0d2e0Fcc984a500fdAEAdDFF;
+const addr = 0x3DbAfeC83B70a60A0d2e0Fcc984a500fdAEAdDFF";
+try { console.log("DESPUÉS:", (await nft.tokenURI(0)).toString()); } catch(e) {}
+// Comprobar de nuevo:
+await nft.setBaseURI("https://ipfs.io/ipfs/bafybeid25uxtoc4dk7lga3fz7r5v3lqysyz5bcmfcusdxhfhfphx6jqb7e/traveler-");
+// Intentar cambiar baseURI (si tu contrato lo permite y eres owner):
+try { console.log("ANTES:", (await nft.tokenURI(0)).toString()); } catch(e) { console.log("No pude leer tokenURI(0), no pasa nada"); }
+te el token 0):
+// Ver qué devuelve (si exis
+const nft = await ethers.getContractAt("Zlib
+const addr = "0x3DbAfeC83B70a60A0d2e0Fcc984a500fdAEAdDFF";

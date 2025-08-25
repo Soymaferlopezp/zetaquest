@@ -30,7 +30,7 @@ export default function Page() {
       <header className="px-4 py-4 flex items-center justify-between sticky top-0 z-50 bg-black/70 backdrop-blur">
         <Link href="/" className="font-pixel text-xl tracking-wide">ZetaQuest</Link>
         <nav className="hidden md:flex items-center gap-6 text-xs opacity-80">
-          <a href="#how" className="hover:opacity-100">Cómo funciona</a>
+          <a href="#how" className="hover:opacity-100">How it works</a>
           <a href="#buffs" className="hover:opacity-100">Buffs</a>
           <a href="#stack" className="hover:opacity-100">Stack</a>
           <a href="#faq" className="hover:opacity-100">FAQ</a>
@@ -45,18 +45,19 @@ export default function Page() {
         <div className="mx-auto max-w-6xl px-4 pt-14 pb-12 grid md:grid-cols-2 gap-8 items-center">
           <div>
             <h1 className="font-pixel text-4xl md:text-6xl leading-tight">
-              Tu NFT. Tus misiones. <span className="text-cyan-400">Cross-chain</span>.
+              Your NFT.<br />
+              Your Missions.<br />
+              <span className="text-cyan-400">Cross-chain</span>.
             </h1>
             <p className="mt-4 text-slate-300 text-sm md:text-base">
-              Un RPG-lite donde viajas entre blockchains con tu NFT, obtienes <em>buffs</em> por cadena
-              y completas misiones generadas por IA sobre ZetaChain.
+              A RPG-lite where you travel between blockchains with your NFT, obtain <em>buffs</em> by chain and complete AI-generated missions on ZetaChain.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <a href="/app" className="font-press px-4 py-2 rounded-lg bg-cyan-400 text-black hover:brightness-110 transition">
-                Empezar
+                Get started
               </a>
               <a href="#how" className="font-press px-4 py-2 rounded-lg border border-white/25 hover:bg-white/10 transition">
-                Ver cómo funciona
+                See how it works
               </a>
             </div>
             <div className="mt-6 flex items-center gap-4 text-xs text-slate-400">
@@ -95,30 +96,30 @@ export default function Page() {
 
       {/* HOW IT WORKS */}
       <section id="how" className="mx-auto max-w-6xl px-4 py-12">
-        <h2 className="font-pixel text-2xl md:text-3xl">Cómo funciona</h2>
-        <p className="mt-2 text-slate-300 text-sm">Dashboard + tablero de misiones. Simple, limpio, pixel vibes.</p>
+        <h2 className="font-pixel text-2xl md:text-3xl">How it works</h2>
+        <p className="mt-2 text-slate-300 text-sm">Dashboard + mission board. Simple, clean, pixel vibes.</p>
         <div className="mt-6 grid md:grid-cols-3 gap-4">
           <Feature
             icon={ART.espada}
-            title="Mintea tu NFT"
-            desc="1 por jugador. Stats base (rarity/power/defense)."
+            title="Mint your NFT"
+            desc="1 per player. Base stats (rarity/power/defense)."
           />
           <Feature
             icon={ART.warp}
             title="Travel cross-chain"
-            desc="Cambia de cadena y recibe buffs dinámicos visibles."
+            desc="Change chains and receive visible dynamic buffs."
           />
           <Feature
             icon={ART.escudo}
-            title="Completa misiones"
-            desc="Objetivos generados por IA, gana ZetaPoints e insignias."
+            title="Complete missions"
+            desc="AI-generated objectives, earn ZetaPoints and badges."
           />
         </div>
       </section>
 
       {/* BUFFS */}
       <section id="buffs" className="mx-auto max-w-6xl px-4 py-12">
-        <h2 className="font-pixel text-2xl md:text-3xl">Buffs por blockchain (demo)</h2>
+        <h2 className="font-pixel text-2xl md:text-3xl">Buffs per Blockchain (demo)</h2>
         <div className="mt-6 grid md:grid-cols-3 gap-4">
           <BuffCard icon={ART.eth} chain="Ethereum" buff="+10% Power" />
           <BuffCard icon={ART.polygon} chain="Polygon" buff="+15% Defense" />
@@ -128,12 +129,11 @@ export default function Page() {
 
       {/* STACK */}
       <section id="stack" className="mx-auto max-w-6xl px-4 py-12">
-        <h2 className="font-pixel text-2xl md:text-3xl">Stack técnico</h2>
-        <ul className="mt-4 grid md:grid-cols-2 gap-2 text-sm text-slate-300 list-disc list-inside">
-          <li><span className="font-press">Frontend:</span> Next.js 14 + Tailwind (modo pixel)</li>
-          <li><span className="font-press">Backend:</span> API Routes (Node runtime)</li>
-          <li><span className="font-press">Smart Contracts:</span> ZetaChain USC + ERC-721 dinámico</li>
-          <li><span className="font-press">DB:</span> SQLite (demo) / Postgres (prod)</li>
+        <h2 className="font-pixel text-2xl md:text-3xl">Technical stack</h2><br />
+        <ul className="mt-4 grid gap-2 text-sm text-slate-300 list-disc list-inside">
+          <li><span className="font-press">Frontend:</span> Next.js 14 + Tailwind (pixel mood)</li><br />
+          <li><span className="font-press">Backend:</span> API Routes (Node runtime)</li><br />
+          <li><span className="font-press">Smart Contracts:</span> ZetaChain USC + Dynamic ERC-721</li><br />
           <li><span className="font-press">IA:</span> Google Gemini (quests JSON)</li>
         </ul>
       </section>
@@ -141,14 +141,14 @@ export default function Page() {
       {/* CTA FINAL */}
       <section className="mx-auto max-w-6xl px-4 pb-16">
         <div className="rounded-3xl border border-white/15 bg-gradient-to-r from-cyan-500/10 to-indigo-500/10 p-8 text-center">
-          <h3 className="font-pixel text-2xl md:text-3xl">¿Listx para tu primera misión?</h3>
-          <p className="mt-2 text-slate-300 text-sm">Conecta tu wallet, mintea tu NFT y viaja entre cadenas.</p>
+          <h3 className="font-pixel text-2xl md:text-3xl">Ready for your first mission?</h3>
+          <p className="mt-2 text-slate-300 text-sm">Connect your wallet, mint your NFT, and travel between chains.</p>
           <div className="mt-6 flex justify-center gap-3">
             <a href="/app" className="font-press px-4 py-2 rounded-lg bg-cyan-400 text-black hover:brightness-110 transition">
-              Abrir Dashboard
+              Open Dashboard
             </a>
             <a href="#faq" className="font-press px-4 py-2 rounded-lg border border-white/25 hover:bg-white/10 transition">
-              Preguntas frecuentes
+              Frequently asked questions
             </a>
           </div>
         </div>
@@ -159,23 +159,40 @@ export default function Page() {
         <div className="mx-auto max-w-6xl px-4 py-8 grid md:grid-cols-3 gap-6 text-xs text-slate-400">
           <div>
             <div className="font-pixel text-slate-200">ZetaQuest</div>
-            <p className="mt-2">Demo educativa que muestra el poder de ZetaChain: misiones con IA + buffs cross-chain.</p>
+            <p className="mt-2">Educational demo showcasing the power of ZetaChain: AI missions + cross-chain buffs.</p>
           </div>
           <div>
             <div className="font-pixel text-slate-200">FAQ</div>
             <ul className="mt-2 space-y-1">
-              <li>¿El NFT es real? — Sí, ERC-721 dinámico en testnet.</li>
-              <li>¿Las misiones son on-chain? — La narrativa es off-chain; recompensas opcional on-chain.</li>
-              <li>¿Datos guardados? — SQLite local / Postgres en producción.</li>
+              <li>• Is the NFT real? — Yes, dynamic ERC-721 on testnet.</li><br />
+              <li>• Are quests on-chain? — Narrative off-chain (Gemini); XP + NFT updates on-chain (Athens). Mainnet badge optional.</li>
             </ul>
           </div>
           <div>
-            <div className="font-pixel text-slate-200">Contacto</div>
-            <p className="mt-2">X / GitHub.</p>
+            <div className="font-pixel text-slate-200">Contact</div>
+            <p className="mt-2 space-x-3">
+              <a
+                href="https://t.me/+QY-wSXJfWikyNjMx"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:opacity-80"
+              >
+                Telegram
+              </a>
+              <span>/</span>
+              <a
+                href="https://github.com/Soymaferlopezp/zetaquest"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:opacity-80"
+              >
+                GitHub
+              </a>
+            </p>
           </div>
         </div>
         <div className="text-center text-[10px] text-slate-500 pb-8">© 2025 ZetaQuest. All rights reserved.</div>
-        <div className="text-center text-[10px] text-slate-500 pb-8">Hecho con ♥ desde Web3.</div>
+        <div className="text-center text-[10px] text-slate-500 pb-8">Made with ♥ from Web3.</div>
       </footer>
     </main>
   );
